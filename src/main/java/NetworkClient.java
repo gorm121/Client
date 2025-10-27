@@ -3,6 +3,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class NetworkClient {
     private Socket socket;
@@ -10,6 +12,7 @@ public class NetworkClient {
     private BufferedReader in;
     private BufferedReader consoleReader;
     private boolean authenticated = false;
+    private String user;
 
     public void connect() {
         try {
@@ -18,7 +21,7 @@ public class NetworkClient {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
-            // УБРАЛИ startListener() - всё в одном потоке
+
             showAuthMenu();
 
         } catch (Exception e) {
@@ -30,7 +33,6 @@ public class NetworkClient {
         while (!authenticated) {
             try {
                 UI.showAuthMenu();
-                System.out.print("Выберите действие: ");
                 String choice = consoleReader.readLine();
 
                 switch (choice) {
@@ -59,9 +61,9 @@ public class NetworkClient {
             String username = consoleReader.readLine();
             System.out.print("Пароль: ");
             String password = consoleReader.readLine();
-
+            user = username;
             out.println("LOGIN:" + username + ":" + password);
-            String response = in.readLine(); // ЖДЕМ ОТВЕТ СЕРВЕРА
+            String response = in.readLine();
             handleServerResponse(response);
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
@@ -75,8 +77,9 @@ public class NetworkClient {
             System.out.print("Пароль: ");
             String password = consoleReader.readLine();
 
+            user = username;
             out.println("REGISTER:" + username + ":" + password);
-            String response = in.readLine(); // ЖДЕМ ОТВЕТ СЕРВЕРА
+            String response = in.readLine();
             handleServerResponse(response);
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
@@ -144,9 +147,10 @@ public class NetworkClient {
             String recipient = consoleReader.readLine();
             System.out.print("Введите имя файла: ");
             String filename = consoleReader.readLine();
+            String send = Files.readString(Path.of(filename));
 
-            out.println("SEND_TO:" + recipient + ":" + filename);
-            String response = in.readLine(); // ЖДЕМ ОТВЕТ
+            out.println("SEND_TO:" + recipient + ":" + filename + ":" + send + ":" + user);
+            String response = in.readLine();
             handleServerResponse(response);
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
