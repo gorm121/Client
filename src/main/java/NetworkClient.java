@@ -108,6 +108,8 @@ public class NetworkClient {
             System.out.println(" Ошибка регистрации");
         } else if (response.startsWith("USERS_LIST:")) {
             showUsersList(response);
+        } else if (response.startsWith("LIST_FILES_RECEIVED:")){
+            handleGetFiles();
         }
     }
 
@@ -116,15 +118,20 @@ public class NetworkClient {
             try {
                 UI.showMainMenu();
                 String choice = consoleReader.readLine();
-
+                String response;
                 switch (choice) {
                     case "1":
                         out.println("LIST_USERS");
-                        String response = in.readLine(); // ЖДЕМ ОТВЕТ
+                        response = in.readLine();
                         handleServerResponse(response);
                         break;
                     case "2":
                         handleSendFile();
+                        break;
+                    case "3":
+                        out.println("LIST_FILES");
+                        response = in.readLine();
+                        handleServerResponse(response);
                         break;
                     case "0":
                         out.println("LOGOUT");
@@ -155,6 +162,53 @@ public class NetworkClient {
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
         }
+    }
+
+    private void handleGetFiles(){
+        try {
+
+            String[] files = in.readLine().substring(5).split(":");
+            if (files.length == 0) {
+                System.out.println("Файлов нет");
+                return;
+            }
+            Path directory = Path.of("./data/received_files/");
+            if (!Files.exists(directory)) {
+                try {
+                    Files.createDirectories(directory);
+                } catch (IOException e) {
+                    System.out.println("Не удалось создать директорию: " + e.getMessage());
+                    return;
+                }
+            }
+
+
+            System.out.println();
+            System.out.println("Отправитель     | Название");
+            for (String file : files){
+                String[] parts = file.split("-");
+                System.out.println(parts[0] + "             " + parts[1]);
+                Path path = directory.resolve("FROM_" + parts[0] + "_"+parts[1]);
+                try {
+                    if (!Files.exists(path)) {
+                        Files.createFile(path);
+                    }
+                    String data = parts[2].substring(1,parts[2].length() - 1);
+                    byte[] bytes = data.getBytes();
+                    Files.write(path, bytes);
+                } catch (IOException e) {
+                    System.out.println("Не удалось создать/записать файл: " + e.getMessage());
+                }
+            }
+            System.out.println();
+
+
+
+
+
+
+
+        } catch (IOException ignored) {}
     }
 
     private void showUsersList(String message) {
