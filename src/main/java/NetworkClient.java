@@ -196,17 +196,12 @@ public class NetworkClient {
                     String data = parts[2].substring(1,parts[2].length() - 1);
                     byte[] bytes = data.getBytes();
                     Files.write(path, bytes);
+                    out.println("DELETE");
                 } catch (IOException e) {
                     System.out.println("Не удалось создать/записать файл: " + e.getMessage());
                 }
             }
             System.out.println();
-
-
-
-
-
-
 
         } catch (IOException ignored) {}
     }
