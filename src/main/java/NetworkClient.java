@@ -16,7 +16,7 @@ public class NetworkClient {
 
     public void connect() {
         try {
-            socket = new Socket("localhost", 12345);
+            socket = new Socket("192.168.0.105", 12345);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             consoleReader = new BufferedReader(new InputStreamReader(System.in));
