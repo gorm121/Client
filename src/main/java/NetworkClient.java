@@ -108,7 +108,7 @@ public class NetworkClient {
             System.out.println(" Ошибка регистрации");
         } else if (response.startsWith("USERS_LIST:")) {
             showUsersList(response);
-        } else if (response.startsWith("LIST_FILES_RECEIVED:")){
+        } else if (response.startsWith("LIST_FILES_RECEIVED:") || response.startsWith("EMPTY")){
             handleGetFiles();
         }
     }
@@ -166,12 +166,12 @@ public class NetworkClient {
 
     private void handleGetFiles(){
         try {
-
-            String[] files = in.readLine().substring(5).split(":");
-            if (files.length == 0) {
+            String res = in.readLine();
+            if (res.isEmpty()) {
                 System.out.println("Файлов нет");
                 return;
             }
+            String[] files = res.substring(20).split(":");
             Path directory = Path.of("./data/received_files/");
             if (!Files.exists(directory)) {
                 try {
