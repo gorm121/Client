@@ -92,11 +92,11 @@ public class NetworkClient {
             return;
         }
 
-        System.out.println("Сервер: " + response);
+//        System.out.println("Сервер: " + response);
 
         if (response.startsWith("AUTH_SUCCESS")) {
             authenticated = true;
-            System.out.println(" Авторизация успешна!");
+            System.out.println("\nАвторизация успешна!");
             handleMainMenu();
         } else if (response.startsWith("AUTH_FAILED")) {
             System.out.println(" Ошибка авторизации");
@@ -109,7 +109,7 @@ public class NetworkClient {
         } else if (response.startsWith("USERS_LIST:")) {
             showUsersList(response);
         } else if (response.startsWith("LIST_FILES_RECEIVED:") || response.startsWith("EMPTY")){
-            handleGetFiles();
+            handleGetFiles(response);
         }
     }
 
@@ -152,6 +152,10 @@ public class NetworkClient {
         try {
             System.out.print("Введите имя получателя: ");
             String recipient = consoleReader.readLine();
+            if (recipient.equals(user)) {
+                System.out.println("Вы не можете отправить файл самому себе");
+                return;
+            }
             System.out.print("Введите имя файла: ");
             String filename = consoleReader.readLine();
             String send = Files.readString(Path.of(filename));
@@ -164,46 +168,42 @@ public class NetworkClient {
         }
     }
 
-    private void handleGetFiles(){
-        try {
-            String res = in.readLine();
-            if (res.isEmpty()) {
-                System.out.println("Файлов нет");
+    private void handleGetFiles(String res){
+        if (res.equals("EMPTY")) {
+            System.out.println("Файлов нет");
+            return;
+        }
+        String[] files = res.substring(20).split(":");
+        Path directory = Path.of("./data/received_files/");
+        if (!Files.exists(directory)) {
+            try {
+                Files.createDirectories(directory);
+            } catch (IOException e) {
+                System.out.println("Не удалось создать директорию: " + e.getMessage());
                 return;
             }
-            String[] files = res.substring(20).split(":");
-            Path directory = Path.of("./data/received_files/");
-            if (!Files.exists(directory)) {
-                try {
-                    Files.createDirectories(directory);
-                } catch (IOException e) {
-                    System.out.println("Не удалось создать директорию: " + e.getMessage());
-                    return;
+        }
+
+        System.out.println();
+        System.out.println("Отправитель     | Название");
+        for (String file : files){
+            String[] parts = file.split("-");
+            System.out.println(parts[0] + "             " + parts[1]);
+            Path path = directory.resolve("FROM_" + parts[0] + "_"+parts[1]);
+            try {
+                if (!Files.exists(path)) {
+                    Files.createFile(path);
                 }
+                String data = parts[2].substring(1,parts[2].length() - 1);
+                byte[] bytes = data.getBytes();
+                Files.write(path, bytes);
+                out.println("DELETE");
+            } catch (IOException e) {
+                System.out.println("Не удалось создать/записать файл: " + e.getMessage());
             }
+        }
+        System.out.println();
 
-
-            System.out.println();
-            System.out.println("Отправитель     | Название");
-            for (String file : files){
-                String[] parts = file.split("-");
-                System.out.println(parts[0] + "             " + parts[1]);
-                Path path = directory.resolve("FROM_" + parts[0] + "_"+parts[1]);
-                try {
-                    if (!Files.exists(path)) {
-                        Files.createFile(path);
-                    }
-                    String data = parts[2].substring(1,parts[2].length() - 1);
-                    byte[] bytes = data.getBytes();
-                    Files.write(path, bytes);
-                    out.println("DELETE");
-                } catch (IOException e) {
-                    System.out.println("Не удалось создать/записать файл: " + e.getMessage());
-                }
-            }
-            System.out.println();
-
-        } catch (IOException ignored) {}
     }
 
     private void showUsersList(String message) {
