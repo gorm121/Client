@@ -1,10 +1,9 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+
 
 public class NetworkClient {
     private Socket socket;
@@ -21,7 +20,7 @@ public class NetworkClient {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
-
+            FileInit.createPath();
             showAuthMenu();
 
         } catch (Exception e) {
@@ -74,8 +73,17 @@ public class NetworkClient {
         try {
             System.out.print("Логин: ");
             String username = consoleReader.readLine();
+            if (!isGoodSign(username)){
+                System.out.println("Имя должно быть из букв");
+                return;
+            }
+
             System.out.print("Пароль: ");
             String password = consoleReader.readLine();
+            if (!isGoodSign(username)){
+                System.out.println("Пароль должен быть из букв");
+                return;
+            }
 
             user = username;
             out.println("REGISTER:" + username + ":" + password);
@@ -86,9 +94,21 @@ public class NetworkClient {
         }
     }
 
+    private boolean isGoodSign(String str){
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < str.length(); i++) {
+            if (!Character.isLetter(str.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void handleServerResponse(String response) {
         if (response == null) {
-            System.out.println("Сервер разорвал соединение");
+            System.out.println("\nСервер разорвал соединение\n");
             return;
         }
 
@@ -96,20 +116,27 @@ public class NetworkClient {
 
         if (response.startsWith("AUTH_SUCCESS")) {
             authenticated = true;
-            System.out.println("\nАвторизация успешна!");
+            System.out.println("\n\nАвторизация успешна!\n");
             handleMainMenu();
         } else if (response.startsWith("AUTH_FAILED")) {
-            System.out.println(" Ошибка авторизации");
+            System.out.println("\n\nОшибка авторизации\n");
         } else if (response.startsWith("REGISTER_SUCCESS")) {
             authenticated = true;
-            System.out.println(" Регистрация успешна!");
+            System.out.println("\n\nРегистрация успешна!");
             handleMainMenu();
         } else if (response.startsWith("REGISTER_FAILED")) {
-            System.out.println(" Ошибка регистрации");
+            System.out.println("\n\nОшибка регистрации\n");
         } else if (response.startsWith("USERS_LIST:")) {
             showUsersList(response);
         } else if (response.startsWith("LIST_FILES_RECEIVED:") || response.startsWith("EMPTY")){
             handleGetFiles(response);
+        } else if (response.startsWith("SEND_TO_RECEIVED")) {
+            System.out.println("\n\nФайл успешно отправлен\n");
+            handleMainMenu();
+        }
+        else if (response.startsWith("BAD_SEND_TO")) {
+            System.out.println("\n\nНе удалось отправить файл\n");
+            handleMainMenu();
         }
     }
 
@@ -156,15 +183,52 @@ public class NetworkClient {
                 System.out.println("Вы не можете отправить файл самому себе");
                 return;
             }
-            System.out.print("Введите имя файла: ");
-            String filename = consoleReader.readLine();
-            String send = Files.readString(Path.of(filename));
+            if (recipient.isEmpty()){
+                System.out.println("Поле не должно быть пустым\n");
+                return;
+            }
 
-            out.println("SEND_TO:" + recipient + ":" + filename + ":" + send + ":" + user);
-            String response = in.readLine();
-            handleServerResponse(response);
+            String filesDir = "files";
+            File dir = new File(filesDir);
+            if (!dir.exists()) {
+                Files.createDirectory(dir.toPath());
+            }
+
+            System.out.println("Файлы в папке " + filesDir + ":");
+            File[] files = dir.listFiles();
+            if (files != null && files.length > 0) {
+                for (int i = 0; i < files.length; i++) {
+                    if (files[i].isFile()) {
+                        System.out.println((i + 1) + ". " + files[i].getName() + " " + Files.size(Path.of(files[i].getPath())) + " bytes");
+                    }
+                }
+            } else {
+                System.out.println("Папка пуста. Добавьте файлы в папку 'files' рядом с JAR");
+                return;
+            }
+
+            System.out.print("Выберите номер файла: ");
+            String input = consoleReader.readLine();
+
+            String filename;
+            try {
+                int fileIndex = Integer.parseInt(input) - 1;
+                if (fileIndex >= 0 && fileIndex < files.length){
+                    filename = files[fileIndex].getPath();
+                    String send = Files.readString(Path.of(filename));
+                    String shortFilename = Paths.get(filename).getFileName().toString();
+
+                    out.println("SEND_TO:" + recipient + ":" + shortFilename + ":" + send + ":" + user);
+
+                    String response = in.readLine();
+                    handleServerResponse(response);
+                }
+                System.out.println("Введите правильное число");
+            } catch (NumberFormatException e) {
+                System.out.println("Вы должны ввести число");
+            }
         } catch (IOException e) {
-            System.out.println("Ошибка ввода: " + e.getMessage());
+            System.out.println("Ошибка чтения файла: " + e.getMessage());
         }
     }
 
@@ -174,7 +238,7 @@ public class NetworkClient {
             return;
         }
         String[] files = res.substring(20).split(":");
-        Path directory = Path.of("./data/received_files/");
+        Path directory = Path.of("data" + File.separator  + "received_files" + File.separator);
         if (!Files.exists(directory)) {
             try {
                 Files.createDirectories(directory);
