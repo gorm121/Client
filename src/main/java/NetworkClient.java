@@ -13,19 +13,90 @@ public class NetworkClient {
     private boolean authenticated = false;
     private String user;
 
+    private int reconnectAttempts = 0;
+    private final int MAX_RECONNECT_ATTEMPTS = 10;
+
     public void connect() {
-        try {
-            socket = new Socket("192.168.0.105", 12345);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            consoleReader = new BufferedReader(new InputStreamReader(System.in));
+        while (reconnectAttempts <= MAX_RECONNECT_ATTEMPTS && !Thread.currentThread().isInterrupted()) {
+            try {
+                disconnect();
+                socket = new Socket("192.168.0.105", 12345);
+                out = new PrintWriter(socket.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
-            FileInit.createPath();
-            showAuthMenu();
-
-        } catch (Exception e) {
-            System.out.println("Ошибка подключения: " + e.getMessage());
+                FileInit.createPath();
+                reconnectAttempts = 0;
+                System.out.println("Подключение к серверу установлено!");
+                showAuthMenu();
+                break;
+            } catch (Exception e) {
+                handleConnectionError(e);
+            }
         }
+    }
+
+    private void handleConnectionError(Exception e) {
+        reconnectAttempts++;
+
+        if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+            System.out.println("Превышено максимальное количество попыток подключения. Завершение работы.");
+            return;
+        }
+
+        System.out.println("Ошибка подключения: " + e.getMessage());
+        System.out.println("Попытка переподключения " + reconnectAttempts + "/" + MAX_RECONNECT_ATTEMPTS);
+        System.out.println("Ожидание 5 секунд...");
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private boolean isConnectionError(IOException e) {
+        String message = e.getMessage();
+        return message != null && (
+                message.contains("Connection reset") ||
+                        message.contains("Connection refused") ||
+                        message.contains("closed") ||
+                        message.contains("broken pipe") ||
+                        message.contains("reset by peer") ||
+                        message.contains("Software caused connection abort")
+        );
+    }
+
+
+    private String readFromServer() throws IOException {
+        try {
+            return in.readLine();
+        } catch (IOException e) {
+            if (isConnectionError(e)) {
+                System.out.println("Потеряно соединение с сервером");
+                handleConnectionLoss();
+            }
+            throw e;
+        }
+    }
+
+    private void writeToServer(String message) {
+        try {
+            out.println(message);
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("Socket closed")) {
+                System.out.println("Потеряно соединение с сервером");
+                handleConnectionLoss();
+            }
+        }
+    }
+
+
+    private void handleConnectionLoss() {
+        authenticated = false;
+        disconnect();
+        System.out.println("Пытаемся восстановить соединение...");
+        connect();
     }
 
     private void showAuthMenu() {
@@ -49,7 +120,10 @@ public class NetworkClient {
                 }
             } catch (IOException e) {
                 System.out.println("Ошибка ввода: " + e.getMessage());
-                return;
+                if (isConnectionError(e)) {
+                    handleConnectionLoss();
+                    return;
+                }
             }
         }
     }
@@ -61,11 +135,15 @@ public class NetworkClient {
             System.out.print("Пароль: ");
             String password = consoleReader.readLine();
             user = username;
-            out.println("LOGIN:" + username + ":" + password);
-            String response = in.readLine();
+            writeToServer("LOGIN:" + username + ":" + password);
+//            out.println("LOGIN:" + username + ":" + password);
+            String response = readFromServer();
             handleServerResponse(response);
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
+            if (isConnectionError(e)) {
+                handleConnectionLoss();
+            }
         }
     }
 
@@ -86,11 +164,15 @@ public class NetworkClient {
             }
 
             user = username;
-            out.println("REGISTER:" + username + ":" + password);
-            String response = in.readLine();
+            writeToServer("REGISTER:" + username + ":" + password);
+//            out.println("REGISTER:" + username + ":" + password);
+            String response = readFromServer();
             handleServerResponse(response);
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
+            if (isConnectionError(e)) {
+                handleConnectionLoss();
+            }
         }
     }
 
@@ -149,7 +231,7 @@ public class NetworkClient {
                 switch (choice) {
                     case "1":
                         out.println("LIST_USERS");
-                        response = in.readLine();
+                        response = readFromServer();
                         handleServerResponse(response);
                         break;
                     case "2":
@@ -157,11 +239,11 @@ public class NetworkClient {
                         break;
                     case "3":
                         out.println("LIST_FILES");
-                        response = in.readLine();
+                        response = readFromServer();
                         handleServerResponse(response);
                         break;
                     case "0":
-                        out.println("LOGOUT");
+                        writeToServer("LOGOUT");
                         authenticated = false;
                         System.out.println("Выход из системы");
                         return;
@@ -170,10 +252,15 @@ public class NetworkClient {
                 }
             } catch (IOException e) {
                 System.out.println("Ошибка ввода: " + e.getMessage());
+                if (isConnectionError(e)) {
+                    handleConnectionLoss();
+                    return;
+                }
                 return;
             }
         }
     }
+
 
     private void handleSendFile() {
         try {
@@ -218,9 +305,10 @@ public class NetworkClient {
                     String send = Files.readString(Path.of(filename));
                     String shortFilename = Paths.get(filename).getFileName().toString();
 
-                    out.println("SEND_TO:" + recipient + ":" + shortFilename + ":" + send + ":" + user);
+                    writeToServer("SEND_TO:" + recipient + ":" + shortFilename + ":" + send + ":" + user);
+//                    out.println("SEND_TO:" + recipient + ":" + shortFilename + ":" + send + ":" + user);
 
-                    String response = in.readLine();
+                    String response = readFromServer();
                     handleServerResponse(response);
                 }
                 System.out.println("Введите правильное число");
@@ -229,6 +317,9 @@ public class NetworkClient {
             }
         } catch (IOException e) {
             System.out.println("Ошибка чтения файла: " + e.getMessage());
+            if (isConnectionError(e)) {
+                handleConnectionLoss();
+            }
         }
     }
 
@@ -261,7 +352,8 @@ public class NetworkClient {
                 String data = parts[2].substring(1,parts[2].length() - 1);
                 byte[] bytes = data.getBytes();
                 Files.write(path, bytes);
-                out.println("DELETE");
+                writeToServer("DELETE");
+//                out.println("DELETE");
             } catch (IOException e) {
                 System.out.println("Не удалось создать/записать файл: " + e.getMessage());
             }
@@ -282,10 +374,11 @@ public class NetworkClient {
 
     private void disconnect() {
         try {
-            if (socket != null) socket.close();
-            if (consoleReader != null) consoleReader.close();
+            if (out != null) out.close();
+            if (in != null) in.close();
+            if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Ошибка при закрытии соединения: " + e.getMessage());
         }
     }
 }
