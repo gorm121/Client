@@ -10,5 +10,11 @@ public class FileInit {
         } catch (IOException e) {
             System.out.println("Произошла ошибки при создании: " + e.getMessage());
         }
+
+        try {
+            Files.createDirectories(Path.of("data" + File.separator  + "logs" + File.separator));
+        } catch (IOException e) {
+            System.out.println("Произошла ошибки при создании: " + e.getMessage());
+        }
     }
 }
