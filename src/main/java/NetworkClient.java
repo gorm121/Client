@@ -316,7 +316,7 @@ public class NetworkClient {
                     }
                 }
             } else {
-                System.out.println("Папка пуста. Добавьте файлы в папку 'files' рядом с JAR");
+                System.out.println("Папка пуста. Добавьте файлы в папку 'files'");
                 return;
             }
 
@@ -330,9 +330,9 @@ public class NetworkClient {
                     filename = files[fileIndex].getPath();
                     String send = Files.readString(Path.of(filename));
                     String shortFilename = Paths.get(filename).getFileName().toString();
+                    send = send.replace("\n", "\\n").replace("\r", "\\r");
 
                     writeToServer("SEND_TO:" + recipient + ":" + shortFilename + ":" + send + ":" + user);
-
                     String response = readFromServer();
                     handleServerResponse(response);
                 }
@@ -354,7 +354,7 @@ public class NetworkClient {
             System.out.println("Файлов нет");
             return;
         }
-        System.out.println(res);
+
         String[] files = res.substring(20).split(":");
         Path directory = Path.of("data" + File.separator  + "received_files" + File.separator);
         if (!Files.exists(directory)) {
@@ -383,7 +383,6 @@ public class NetworkClient {
                 writeToServer("DELETE");
             } catch (IOException e) {
                 ClientLogger.warning("Не удалось создать/записать файл: " + e.getMessage());
-                System.out.println("Не удалось создать/записать файл: " + e.getMessage());
             }
         }
         System.out.println();

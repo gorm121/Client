@@ -55,7 +55,7 @@ public class ClientLogger {
     }
 
     private static void disableLogging() {
-        logger = Logger.getLogger("MyLogger");
+        logger = Logger.getLogger("ClientLogger");
         logger.setLevel(Level.OFF);
         for (Handler handler : logger.getHandlers()) {
             logger.removeHandler(handler);
@@ -64,11 +64,11 @@ public class ClientLogger {
 
     private static void setupWarningLogging() {
         try {
-            FileHandler fileHandler = new FileHandler("data/logs/client_%g.log", 1024 * 1024, 3, true);
+            FileHandler fileHandler = new FileHandler("data/logs/client.log", 1024 * 1024, 3, true);
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.WARNING);
 
-            logger = Logger.getLogger("MyLogger");
+            logger = Logger.getLogger("ClientLogger");
             logger.setLevel(Level.WARNING);
 
             removeConsoleHandlers(logger);
@@ -81,11 +81,11 @@ public class ClientLogger {
 
     private static void setupInfoLogging() {
         try {
-            FileHandler fileHandler = new FileHandler("data/logs/client_%g.log", 1024 * 1024, 3, true);
+            FileHandler fileHandler = new FileHandler("data/logs/client.log", 1024 * 1024, 3, true);
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.INFO);
 
-            logger = Logger.getLogger("MyLogger");
+            logger = Logger.getLogger("ClientLogger");
             logger.setLevel(Level.INFO);
 
             removeConsoleHandlers(logger);
