@@ -378,7 +378,7 @@ public class NetworkClient {
                     Files.createFile(path);
                 }
                 String data = parts[2].substring(1,parts[2].length() - 1)
-                        .replace("\\\\n", "\n");
+                        .replace("\\\\n", "\n").replace("\\\\r", "\r");
                 byte[] bytes = data.getBytes();
                 Files.write(path, bytes);
                 writeToServer("DELETE");
