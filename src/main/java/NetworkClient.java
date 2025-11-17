@@ -377,7 +377,8 @@ public class NetworkClient {
                 if (!Files.exists(path)) {
                     Files.createFile(path);
                 }
-                String data = parts[2].substring(1,parts[2].length() - 1);
+                String data = parts[2].substring(1,parts[2].length() - 1)
+                        .replace("\\\\n", "\n");
                 byte[] bytes = data.getBytes();
                 Files.write(path, bytes);
                 writeToServer("DELETE");
