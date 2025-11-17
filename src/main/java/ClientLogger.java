@@ -64,7 +64,7 @@ public class ClientLogger {
 
     private static void setupWarningLogging() {
         try {
-            FileHandler fileHandler = new FileHandler("data/logs/client.log", 1024 * 1024, 3, true);
+            FileHandler fileHandler = new FileHandler("data/logs/client.log", 0, 1, true);
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.WARNING);
 
@@ -81,7 +81,7 @@ public class ClientLogger {
 
     private static void setupInfoLogging() {
         try {
-            FileHandler fileHandler = new FileHandler("data/logs/client.log", 1024 * 1024, 3, true);
+            FileHandler fileHandler = new FileHandler("data/logs/client.log", 0, 1, true);
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.INFO);
 
