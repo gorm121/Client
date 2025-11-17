@@ -26,11 +26,11 @@ public class NetworkClient {
                 consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
 
-                MyLogger.initialize("3");
+                ClientLogger.initialize("3");
                 FileInit.createPath();
                 reconnectAttempts = 0;
                 System.out.println("Подключение к серверу установлено!");
-                MyLogger.info("Клиент подключился к серверу");
+                ClientLogger.info("Клиент подключился к серверу");
                 showAuthMenu();
                 break;
             } catch (Exception e) {
@@ -41,10 +41,10 @@ public class NetworkClient {
 
     private void handleConnectionError(Exception e) {
         reconnectAttempts++;
-        MyLogger.warning("Ошибка подключения: " + e.getMessage() + " (попытка " + reconnectAttempts + ")");
+        ClientLogger.warning("Ошибка подключения: " + e.getMessage() + " (попытка " + reconnectAttempts + ")");
         if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
             System.out.println("Превышено максимальное количество попыток подключения. Завершение работы.");
-            MyLogger.severe("Превышено максимальное количество попыток подключения");
+            ClientLogger.severe("Превышено максимальное количество попыток подключения");
             return;
         }
 
@@ -56,7 +56,7 @@ public class NetworkClient {
             Thread.sleep(5000);
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            MyLogger.warning("Поток был прерван во время ожидания переподключения");
+            ClientLogger.warning("Поток был прерван во время ожидания переподключения");
         }
     }
 
@@ -141,12 +141,12 @@ public class NetworkClient {
             String password = consoleReader.readLine();
             user = username;
             writeToServer("LOGIN:" + username + ":" + password);
-            MyLogger.info("Попытка входа пользователя: " + username);
+            ClientLogger.info("Попытка входа пользователя: " + username);
             String response = readFromServer();
             handleServerResponse(response);
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
-            MyLogger.warning("Ошибка ввода при входе: " + e.getMessage());
+            ClientLogger.warning("Ошибка ввода при входе: " + e.getMessage());
             if (isConnectionError(e)) {
                 handleConnectionLoss();
             }
@@ -158,7 +158,7 @@ public class NetworkClient {
             System.out.print("Логин: ");
             String username = consoleReader.readLine();
             if (!isGoodSign(username)){
-                MyLogger.warning("Неверный формат логина: " + username);
+                ClientLogger.warning("Неверный формат логина: " + username);
                 System.out.println("Имя должно быть из букв");
                 return;
             }
@@ -166,19 +166,19 @@ public class NetworkClient {
             System.out.print("Пароль: ");
             String password = consoleReader.readLine();
             if (!isGoodSign(username)){
-                MyLogger.warning("Неверный формат пароля для пользователя: " + username);
+                ClientLogger.warning("Неверный формат пароля для пользователя: " + username);
                 System.out.println("Пароль должен быть из букв");
                 return;
             }
 
             user = username;
             writeToServer("REGISTER:" + username + ":" + password);
-            MyLogger.info("Попытка регистрации пользователя: " + username);
+            ClientLogger.info("Попытка регистрации пользователя: " + username);
             String response = readFromServer();
             handleServerResponse(response);
         } catch (IOException e) {
             System.out.println("Ошибка ввода: " + e.getMessage());
-            MyLogger.warning("Ошибка ввода при регистрации: " + e.getMessage());
+            ClientLogger.warning("Ошибка ввода при регистрации: " + e.getMessage());
             if (isConnectionError(e)) {
                 handleConnectionLoss();
             }
@@ -200,40 +200,40 @@ public class NetworkClient {
     private void handleServerResponse(String response) {
         if (response == null) {
             System.out.println("\nСервер разорвал соединение\n");
-            MyLogger.warning("Сервер разорвал соединение");
+            ClientLogger.warning("Сервер разорвал соединение");
             return;
         }
 
 
         if (response.startsWith("AUTH_SUCCESS")) {
             authenticated = true;
-            MyLogger.info("Пользователь " + user + " успешно авторизовался");
+            ClientLogger.info("Пользователь " + user + " успешно авторизовался");
             System.out.println("\n\nАвторизация успешна!\n");
             handleMainMenu();
         } else if (response.startsWith("AUTH_FAILED")) {
-            MyLogger.warning("Ошибка авторизации для пользователя: " + user);
+            ClientLogger.warning("Ошибка авторизации для пользователя: " + user);
             System.out.println("\n\nОшибка авторизации\n");
         } else if (response.startsWith("REGISTER_SUCCESS")) {
             authenticated = true;
-            MyLogger.info("Пользователь " + user + " успешно зарегистрирован");
+            ClientLogger.info("Пользователь " + user + " успешно зарегистрирован");
             System.out.println("\n\nРегистрация успешна!");
             handleMainMenu();
         } else if (response.startsWith("REGISTER_FAILED")) {
-            MyLogger.warning("Ошибка регистрации для пользователя: " + user);
+            ClientLogger.warning("Ошибка регистрации для пользователя: " + user);
             System.out.println("\n\nОшибка регистрации\n");
         } else if (response.startsWith("USERS_LIST:")) {
-            MyLogger.info("Пользователь " + user + " запросил список пользователей");
+            ClientLogger.info("Пользователь " + user + " запросил список пользователей");
             showUsersList(response);
         } else if (response.startsWith("LIST_FILES_RECEIVED:") || response.startsWith("EMPTY")){
-            MyLogger.info("Пользователь " + user + " запросил список файлов");
+            ClientLogger.info("Пользователь " + user + " запросил список файлов");
             handleGetFiles(response);
         } else if (response.startsWith("SEND_TO_RECEIVED")) {
-            MyLogger.info("Пользователь " + user + " успешно отправил файл");
+            ClientLogger.info("Пользователь " + user + " успешно отправил файл");
             System.out.println("\n\nФайл успешно отправлен\n");
             handleMainMenu();
         }
         else if (response.startsWith("BAD_SEND_TO")) {
-            MyLogger.warning("Ошибка отправки файла от пользователя: " + user);
+            ClientLogger.warning("Ошибка отправки файла от пользователя: " + user);
             System.out.println("\n\nНе удалось отправить файл\n");
             handleMainMenu();
         }
@@ -262,21 +262,21 @@ public class NetworkClient {
                     case "4":
                         UI.showMenuLogging();
                         String logChoice = consoleReader.readLine();
-                        MyLogger.initialize(logChoice);
+                        ClientLogger.initialize(logChoice);
                         handleMainMenu();
                     case "0":
                         writeToServer("LOGOUT");
                         authenticated = false;
                         System.out.println("Выход из системы");
-                        MyLogger.info("Пользователь " + user + " вышел из системы");
+                        ClientLogger.info("Пользователь " + user + " вышел из системы");
                         return;
                     default:
                         System.out.println("Неверное действие");
-                        MyLogger.warning("Пользователь " + user + " ввел неверную команду: " + choice);
+                        ClientLogger.warning("Пользователь " + user + " ввел неверную команду: " + choice);
                 }
             } catch (IOException e) {
                 System.out.println("Ошибка ввода: " + e.getMessage());
-                MyLogger.warning("Ошибка ввода в главном меню: " + e.getMessage());
+                ClientLogger.warning("Ошибка ввода в главном меню: " + e.getMessage());
                 if (isConnectionError(e)) {
                     handleConnectionLoss();
                     return;
@@ -306,9 +306,10 @@ public class NetworkClient {
                 Files.createDirectory(dir.toPath());
             }
 
-            System.out.println("Файлы в папке " + filesDir + ":");
+
             File[] files = dir.listFiles();
             if (files != null && files.length > 0) {
+                System.out.println("Файлы в папке " + filesDir + ":");
                 for (int i = 0; i < files.length; i++) {
                     if (files[i].isFile()) {
                         System.out.println((i + 1) + ". " + files[i].getName() + " " + Files.size(Path.of(files[i].getPath())) + " bytes");
@@ -349,7 +350,7 @@ public class NetworkClient {
 
     private void handleGetFiles(String res){
         if (res.equals("EMPTY")) {
-            MyLogger.info("Файлов нет для " + user);
+            ClientLogger.info("Файлов нет для " + user);
             System.out.println("Файлов нет");
             return;
         }
@@ -361,7 +362,7 @@ public class NetworkClient {
                 Files.createDirectories(directory);
             } catch (IOException e) {
                 System.out.println("Не удалось создать директорию: " + e.getMessage());
-                MyLogger.warning("Не удалось создать директорию: " + e.getMessage());
+                ClientLogger.warning("Не удалось создать директорию: " + e.getMessage());
                 return;
             }
         }
@@ -381,7 +382,7 @@ public class NetworkClient {
                 Files.write(path, bytes);
                 writeToServer("DELETE");
             } catch (IOException e) {
-                MyLogger.warning("Не удалось создать/записать файл: " + e.getMessage());
+                ClientLogger.warning("Не удалось создать/записать файл: " + e.getMessage());
                 System.out.println("Не удалось создать/записать файл: " + e.getMessage());
             }
         }
